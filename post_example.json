@@ -5,55 +5,73 @@
 
 // TISDAR.thuenen.de is only available from inside our LAN
 // TODO: Use publicly available examples for WFS
-{
-    "conf": {
-        "wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
-        "typename": "geonode:nsg_2018",
-        "bbox" :[3634359, 5734047, 3680977, 5757722],
-        "srsname" : "urn:x-ogc:def:crs:EPSG:5677"
-        },
-    "note": "posted via curl"
-}
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "airflow:airflow" \
+     "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
+     -d '{"conf": 
+            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
+            "typename": "geonode:nsg_2018",
+            "bbox" :[3634359, 5734047, 3680977, 5757722],
+            "srsname" : "urn:x-ogc:def:crs:EPSG:5677"},
+            "note": "posted via curl"
+        }'
 ,
-{
-    "conf": {
-            "wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "airflow:airflow" \
+     "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
+     -d '{"conf": 
+            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
             "typename": "geonode:st_flurstueck",
             "bbox" :[653144, 5742038, 661570, 5745537],
-            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"
-        },
-    "note": "posted via curl"
-}
+            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"},
+            "note": "posted via curl"
+        }'
 ,
-{
-    "conf": {
-            "wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "airflow:airflow" \
+     "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
+     -d '{"conf": 
+            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
             "typename": "geonode:bze_lw_standorte_verschleiert",
             "bbox" :[642286, 5732690, 691959, 5757916],
-            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"
-        },
-    "note": "posted via curl"
-}
+            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"},
+            "note": "posted via curl"
+        }'
 ,
 // ####################### WCS
 // http://localhost:8080/api/v1/ui/#/DAGRun/post_dag_run
 // DAG: fetch_wcs_tif
-{
-     "conf": {
-             "wcs_url": "http://maps.isric.org/mapserv?map=/map/phh2o.map",
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "airflow:airflow" \
+     "localhost:8080/api/v1/dags/fetch_wcs/dagRuns" \
+     -d '{"conf": 
+            {"wcs_url": "http://maps.isric.org/mapserv?map=/map/phh2o.map",
              "cov_id": "phh2o_0-5cm_mean",
              "bbox" :[["X", 1947689, 1975229],["Y", 5716675, 5737890]],
-             "srsname" : "http://www.opengis.net/def/crs/EPSG/0/152160"
-         },
-     "note": "posted via curl"
-}
+             "srsname" : "http://www.opengis.net/def/crs/EPSG/0/152160"},
+             "note": "posted via curl"
+        }'
 ,
-{
-    "conf": {
-            "wcs_url": "https://atlas.thuenen.de/geoserver/ows",
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "airflow:airflow" \
+     "localhost:8080/api/v1/dags/fetch_wcs/dagRuns" \
+    -d '{"conf": 
+            {"wcs_url": "https://atlas.thuenen.de/geoserver/ows",
             "cov_id": "geonode__pH_map_0_30",
             "bbox" :[["X", 5730909, 5758160],["Y", 4433677, 4487337]],
-            "srsname" : "http://www.opengis.net/def/crs/EPSG/0/31468"
-        },
-    "note": "posted via curl"
-}
+            "srsname" : "http://www.opengis.net/def/crs/EPSG/0/31468"},
+            "note": "posted via curl"
+        }'
+
+// #######################################
+// ####### TEST RUN PARMAS - SYSNTAX #####
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "AIRFLOW-USERNAME:AIRFLOW-PASSWORD" \
+     "localhost:8080/api/v1/dags/DAG-ID/dagRuns" \
+     -d '{CONF}'

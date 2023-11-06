@@ -1,11 +1,14 @@
-# install
+# BreedFides-ETL
 
-* GDAL and OGR must be installed!
-    * `sudo apt install gdal-bin python3-gdal libgdal-dev`
-* check successful install with `python3 hello-spatial.py`
-* create python 3.10. venv
-    * install visual studio code python extension and follow (https://code.visualstudio.com/docs/python/environments)
-    * use vscode to install requirements or `pip3 install requirements -r`
-* start airflow via `airflow standalone`
-* use post_example.json on API to trigger DAG runs
-* results will be stored here
+## Usage
+* Clone the repository to the local filesystem
+
+* Navigate to the repository directory using the Terminal
+
+* To install the project's dependencies, execute the command ```make install-dependencies``` - This command not only installs the packages listed in the requirements.txt file but also configures PostgreSQL and initializes the metadata database used by Airflow.
+
+* Start the Airflow webserver and its scheduler by running the command ```make run-airflow```
+
+* Utilize one of the example headers available in ```post_example.json``` to trigger the Airflow DAGs.
+
+* Data results generated from the ```wcs``` or ```wfs``` data-sources will be stored in a directory named after the respective data sources.
