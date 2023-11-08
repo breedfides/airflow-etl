@@ -1,3 +1,5 @@
+export AIRFLOW_HOME := $(shell pwd)/
+
 requirements:
 	pip3 install -r requirements.txt
 
