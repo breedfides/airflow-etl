@@ -71,6 +71,8 @@ def fetch_api(**kwargs):
                 bbox = bbox,
                 srsname = srsname,
                 outputFormat = 'json').read().decode('utf-8')
+            
+            response = json.loads(response) ### CONVERT TO JSON OBJECT
         
             logger.info(f"Writing feature data to breedfides-airflow/wfs/{filename}.json")
             with open(f'wfs/{filename}.json', 'w') as json_file:
