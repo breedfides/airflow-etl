@@ -9,37 +9,43 @@ curl -H "Content-type: application/json" \
      -H "Accept: application/json" \
      -X POST --user "airflow:airflow" \
      "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
-     -d '{"conf": 
-            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
-            "typename": "geonode:nsg_2018",
-            "bbox" :[3634359, 5734047, 3680977, 5757722],
-            "srsname" : "urn:x-ogc:def:crs:EPSG:5677"},
-            "note": "posted via curl"
-        }'
+     -d '{
+          "conf": {
+              "wfs_url": "https://atlas.thuenen.de/geoserver/ows",
+              "typename": "geonode:wgwb_forstl_gl_2005",
+              "bbox" :[7.62828,52.089,8.61400,53.0395],
+              "srsname" : "urn:x-ogc:def:crs:EPSG::4326"
+              },
+          "note": "posted via curl"
+      }'
 ,
 curl -H "Content-type: application/json" \
      -H "Accept: application/json" \
      -X POST --user "airflow:airflow" \
      "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
-     -d '{"conf": 
-            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
-            "typename": "geonode:st_flurstueck",
-            "bbox" :[653144, 5742038, 661570, 5745537],
-            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"},
-            "note": "posted via curl"
-        }'
+     -d '{
+          "conf": {
+              "wfs_url": "https://atlas.thuenen.de/geoserver/ows",
+              "typename": "geonode:waldatlas_bze_v_bze_c_vorrat1",
+              "bbox": [7.628,52.0899798,8.61400666,53.039],
+              "srsname": "urn:x-ogc:def:crs:EPSG:25832"
+          },
+          "note": "posted via curl"
+      }'
 ,
 curl -H "Content-type: application/json" \
      -H "Accept: application/json" \
      -X POST --user "airflow:airflow" \
      "localhost:8080/api/v1/dags/fetch_wfs/dagRuns" \
-     -d '{"conf": 
-            {"wfs_url": "https://tisdar.thuenen.de/geoserver/ows",
-            "typename": "geonode:bze_lw_standorte_verschleiert",
-            "bbox" :[642286, 5732690, 691959, 5757916],
-            "srsname" : "urn:x-ogc:def:crs:EPSG:25832"},
-            "note": "posted via curl"
-        }'
+     -d '{
+          "conf": {
+                  "wfs_url": "https://atlas.thuenen.de/geoserver/ows",
+                  "typename": "geonode:wgwb_wuchsgebiete_2005",
+                  "bbox" :[7.6282893790813686,52.0899798538522845,8.6140066668727044,53.0395973314683573],
+                  "srsname" : "urn:x-ogc:def:crs:EPSG:25832"
+              },
+          "note": "posted via curl"
+      }'
 ,
 // ####################### WCS
 // http://localhost:8080/api/v1/ui/#/DAGRun/post_dag_run

@@ -59,6 +59,9 @@ def fetch_api(**kwargs):
                 file.write(response.read())
             
         elif dag_id == 'fetch_wfs':
+            typename = params['typename']
+            filename = typename.replace(':', '_')
+            
             wfs_url, typename = params['wfs_url'], params['typename']
             wfs = WebFeatureService(url=wfs_url, version='1.1.0')
         
@@ -67,11 +70,11 @@ def fetch_api(**kwargs):
                 typename = typename,
                 bbox = bbox,
                 srsname = srsname,
-                outputFormat = 'json')
+                outputFormat = 'json').read().decode('utf-8')
         
             logger.info(f"Writing feature data to breedfides-airflow/wfs/{filename}.json")
             with open(f'wfs/{filename}.json', 'w') as json_file:
-                json_file.write(response)
+                json.dump(response, json_file)
         
     except Exception as e:
         logger.error(f"An error occured while extracting the GeoNetwork data: {e}")
