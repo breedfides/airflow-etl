@@ -9,9 +9,6 @@
 ## Comments:
 ##########################################################
 
-import sys
-import os
-sys.path.append(f'{os.path.dirname(os.path.abspath(__file__))}/src/')
 import json 
 import pendulum
 from datetime import datetime, timedelta
@@ -20,7 +17,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 
-from utility import fetch_api
+from src.utility import download_geodata
 
 ####################
 ## DAG definition ##
@@ -42,9 +39,9 @@ dag = DAG(
 )
 
 with dag:
-    extract = PythonOperator(
-        task_id='extract',
-        python_callable=fetch_api,
+    input = PythonOperator(
+        task_id='input',
+        python_callable=download_geodata,
         provide_context=True,
         execution_timeout=timedelta(seconds=3600)
     )
@@ -61,4 +58,4 @@ with dag:
     #     replace=True     
     # )
     
-    extract #>> transform >> load
+    input #>> transform >> load
