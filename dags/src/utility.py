@@ -25,7 +25,6 @@ import xarray as xr
 import dask
 import glob
 from osgeo import ogr, osr
-import pyproj
 import dask.dataframe as dd
 import owslib.fes
 from owslib.wfs import WebFeatureService
@@ -35,12 +34,20 @@ from rasterio import plot, MemoryFile
 import logging
 from datetime import datetime
 
+### GLOBAL VARS
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 current_dir = os.getcwd()
 
 # Get today's date and time
 date_now = datetime.now().strftime("%Y%m%d_%H%M")
+
+### Initialize Spatial reference for User's Lat/Long coordinates (WGS84 coordinate system)
+SRS_LATLON = osr.SpatialReference()
+SRS_LATLON.ImportFromEPSG(4326)
+SRS_UTM = osr.SpatialReference() ## Initialize spatial reference for a projected coordinate system UTM (Universal Transverse Mercator) Zone 32 North
+SRS_UTM.ImportFromEPSG(32632)
+
 
 def fetch_payload(**kwargs):
     """
@@ -163,29 +170,23 @@ def clip_data(**kwargs):
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
         lat_min, lat_max, long_min, long_max = convert_buffer_extent(buffer_extent)
         
-        clipped_data = []
-        file_list = [f'{directory}/{file}' for file in os.listdir(f'{directory}/')[1:]]
+        dataset = xr.open_mfdataset(f'{directory}/*.nc')
         
-        for geo_data in file_list:
-            dataset = xr.open_dataset(geo_data)
-            ddf = dataset.to_dask_dataframe() ### Fit all netCDF files to a Dask dataframe
-            
-            # Clip the Dask DataFrame based on the converted buffer extent
-            ddf_clipped = ddf[(ddf['lon'] >= long_min) & (ddf['lon'] <= long_max) & (ddf['lat'] >= lat_min) & (ddf['lat'] <= lat_max)]
-            
-            if len(ddf_clipped) > 0:
-                clipped_data.append(ddf_clipped)
+        # Clip the Array based on the converted buffer extent and set a boolean mask
+        mask_lon = (dataset.lon >= long_min) & (dataset.lon <= long_max)
+        mask_lat = (dataset.lat >= lat_min) & (dataset.lat <= lat_max)
+
+        mask_lon = mask_lon.compute()
+        mask_lat = mask_lat.compute()
         
-        ### Concatenate and save clipped output as parquet
-        if clipped_data:
-            concat_ddf = dd.concat(clipped_data, axis=0)  
-              
-            output_path = f'{current_dir}/output/{geo_tag}/{geo_tag}_{date_now}.parquet'
-            logger.info(f"Writing clipped data to {output_path}")
-            concat_ddf.to_parquet(output_path, engine='pyarrow') 
-        
-        else:
-            logger.warning("No data to save. Clipped data is empty.")
+        # Apply the masks to subset the dataset
+        subset_ds = dataset.where(mask_lon & mask_lat, drop=True)
+        clipped_df = subset_ds.to_dask_dataframe()
+          
+        # Write output as parquet
+        output_path = f'{current_dir}/output/{geo_tag}/{geo_tag}_{date_now}.parquet'
+        logger.info(f"Writing clipped data to {output_path}")
+        clipped_df.to_parquet(output_path, engine='pyarrow') 
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoNetwork data: {e}")
@@ -216,14 +217,9 @@ def compute_buffer_extent(long, lat, buffer_in_metres):
         ### creation of point geometry with user / front end lat-long values
         point = ogr.Geometry(ogr.wkbPoint)
         point.AddPoint(float(long), float(lat))
-        
-        # spatial reference required to convert/transform WGS84 values to Projected CRS
-        srs_latlon = osr.SpatialReference()
-        srs_latlon.ImportFromEPSG(4326)
-        srs_utm = osr.SpatialReference()
-        srs_utm.ImportFromEPSG(32632)
 
-        proj_point =osr.CoordinateTransformation(srs_latlon,srs_utm)
+        ## Transform point from the WGS84 (latitude and longitude) coordinate system (SRS_LATLON) to the UTM Zone 32 North coordinate system (SRS_UTM)
+        proj_point = osr.CoordinateTransformation(SRS_LATLON, SRS_UTM)
         point.Transform(proj_point)
 
         # buffer creation and buffer extent as output
@@ -245,19 +241,12 @@ def convert_buffer_extent(buffer_extent):
     Output: The resulting coordinates represent the minimum and maximum latitude and longitude values.
     """
     try:
-        # Define the original and target coordinate reference systems
-        original_crs = pyproj.CRS.from_epsg(32632)  # UTM Zone 32 North
-        target_crs = pyproj.CRS.from_epsg(4326)    # WGS84, the standard for latitude and longitude
-        
-        # Create a transformer
-        transformer = pyproj.Transformer.from_crs(original_crs, target_crs, always_xy=True)
-        
-        # Initialize x/y coordinates from Buffer-Extent
-        ymin, ymax, xmin, xmax = buffer_extent
+        # Convert UTM coordinates back to latitude and longitude
+        proj_extent_to_latlon = osr.CoordinateTransformation(SRS_UTM, SRS_LATLON)
         
         # Perform the transformation
-        long_min, lat_min = transformer.transform(xmin, ymin)
-        long_max, lat_max = transformer.transform(xmax, ymax)
+        long_min, lat_min, _ = proj_extent_to_latlon.TransformPoint(buffer_extent[0], buffer_extent[2])
+        long_max, lat_max, _ = proj_extent_to_latlon.TransformPoint(buffer_extent[1], buffer_extent[3])
         
         return lat_min, lat_max, long_min, long_max
     

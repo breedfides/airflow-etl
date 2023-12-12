@@ -1,5 +1,6 @@
 ##########################################################
-## Description: The fetch_cdc_radiation_DAG is a ...
+## Description: The fetch_cdc_radiation_DAG is a chained sequence of tasks that fetches geospatial climate data from a provided FTP site,
+##              clips the downloaded dataset using input lat/long positions and loads the output to a datalake on S3
 ##########################################################
 ## Project: BMI Thünen Institute Breedfides
 ## Date: 26.10.2023
