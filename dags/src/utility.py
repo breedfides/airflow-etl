@@ -37,7 +37,8 @@ from datetime import datetime
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-current_dir = os.getcwd()
+## current_dir = os.getcwd() ## Uncomment this and comment the next line if testing is on local-env (not prod server)
+current_dir = os.path.expanduser(os.path.join("~", 'airflow-etl/'))
 
 # Get today's date and time
 date_now = datetime.now().strftime("%Y%m%d_%H%M")
@@ -90,7 +91,8 @@ def download_geodata(**kwargs):
 
             ## write response to hdd as json file:
             logger.info(f"Writing coverage file to breedfides-airflow/wcs/{filename}.tif")
-            with open(f'{current_dir}/wcs/{filename}.tif', 'wb') as file:
+            output_dir_path = os.path.join(current_dir, 'wcs', f'{filename}.tif')
+            with open(output_dir_path, 'wb') as file:
                 file.write(response.read())
             
         elif dag_id == 'fetch_wfs':
@@ -110,13 +112,14 @@ def download_geodata(**kwargs):
             response = json.loads(response) ### CONVERT TO JSON OBJECT
         
             logger.info(f"Writing feature data to breedfides-airflow/wfs/{filename}.json")
-            with open(f'{current_dir}/wfs/{filename}.json', 'w') as json_file:
+            output_dir_path = os.path.join(current_dir, 'wfs', f'{filename}.json')
+            with open(output_dir_path, 'w') as json_file:
                 json.dump(response, json_file)
                 
         elif 'fetch_cdc' in dag_id:
             ftp_dir = kwargs['dag'].tags[-1]
             ftp = ftplib.FTP('opendata.dwd.de', timeout=3600)
-            local_file_path = f'{current_dir}/{ftp_dir}'
+            local_file_path = current_dir + ftp_dir
             
             ftp.login() ### Login to FTP site
             
@@ -162,7 +165,7 @@ def clip_data(**kwargs):
                  it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded netCDF4 geodata
     """
     input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
-    directory = f"{current_dir}/{geo_tag}"
+    directory = current_dir + geo_tag
     
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000
@@ -181,12 +184,11 @@ def clip_data(**kwargs):
         
         # Apply the masks to subset the dataset
         subset_ds = dataset.where(mask_lon & mask_lat, drop=True)
-        clipped_df = subset_ds.to_dask_dataframe()
           
-        # Write output as parquet
-        output_path = f'{current_dir}/output/{geo_tag}/{geo_tag}_{date_now}.parquet'
+        # Write clipped output as netCDF
+        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
         logger.info(f"Writing clipped data to {output_path}")
-        clipped_df.to_parquet(output_path, engine='pyarrow') 
+        subset_ds.to_netcdf(output_path, format='netcdf4')
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoNetwork data: {e}")
