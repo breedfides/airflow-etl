@@ -250,7 +250,7 @@ def clip_data(**kwargs):
 def clip_soil_data(**kwargs):
     """
     Description: The `clip_soil_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
-                 it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded netCDF4 geodata
+                 it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded soil geopackage data
     """
     input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
     directory = os.path.join(current_dir, geo_tag, 'BUEK_data.gpkg')
