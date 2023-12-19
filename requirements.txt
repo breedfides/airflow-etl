@@ -154,4 +154,6 @@ apache-airflow-providers-amazon==8.10.0
 xarray==2023.11.0
 dask==2023.11.0
 netCDF4==1.6.5
-pyproj==3.6.1
+shapely==2.0.2
+geopandas==0.14.1
+python-dotenv==1.0.0

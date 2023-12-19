@@ -33,12 +33,24 @@ import rasterio
 from rasterio import plot, MemoryFile
 import logging
 from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+import geopandas as gpd
+from shapely.geometry import box, MultiPolygon
+from dotenv import load_dotenv
 
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-## current_dir = os.getcwd() ## Uncomment this and comment the next line if testing is on local-env (not prod server)
+## current_dir = f"{os.getcwd()}/" ## Uncomment this and comment the next line if testing is on local-env (not prod server)
 current_dir = os.path.expanduser(os.path.join("~", 'airflow-etl/'))
+
+# Specify the path to the .env file
+dotenv_path = os.path.join(current_dir, 'dags', 'src', '.env')
+
+# Load environment variables from the .env file
+load_dotenv(dotenv_path)
+
 
 # Get today's date and time
 date_now = datetime.now().strftime("%Y%m%d_%H%M")
@@ -72,6 +84,8 @@ def download_geodata(**kwargs):
     """
     input_var = ast.literal_eval(kwargs['params']['input_attributes'])
     dag_id = kwargs['dag'].dag_id ## Extracts DAG-ID from context object
+    ftp_dir = kwargs['dag'].tags[-1] ## Extract Tags
+    local_file_path = current_dir + ftp_dir
     
     try:
         if dag_id == 'fetch_wcs':
@@ -117,9 +131,7 @@ def download_geodata(**kwargs):
                 json.dump(response, json_file)
                 
         elif 'fetch_cdc' in dag_id:
-            ftp_dir = kwargs['dag'].tags[-1]
             ftp = ftplib.FTP('opendata.dwd.de', timeout=3600)
-            local_file_path = current_dir + ftp_dir
             
             ftp.login() ### Login to FTP site
             
@@ -153,6 +165,45 @@ def download_geodata(**kwargs):
                         
             ## Close the FTP connection
             ftp.quit()
+            
+        elif 'fetch_soil' in dag_id:
+            base_url = 'https://cloud.thuenen.de/index.php/s/6RTizJ5ZEPsHJps/'
+            login_url = base_url + 'authenticate/downloadShare'
+            file_url = base_url + 'download?path=%2F&files=BUEK_data.gpkg'
+
+            gpkg_files = set(os.path.basename(fp) for fp in glob.glob(f'{local_file_path}/*.gpkg')) ### List the files in the local directory
+            file_exists, files_to_download = verify_file_exists(gpkg_files, {'BUEK_data.gpkg'})
+      
+            if file_exists:
+                pass
+            
+            else:
+                with requests.Session() as s:
+                    response = s.get(login_url)
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # Extract tokens
+                    request_token = soup.find('input', {'name': 'requesttoken'}).get('value', '')
+                    sharing_token = soup.find('input', {'name': 'sharingToken'}).get('value', '')
+
+                    data = {
+                        'password': os.getenv("PASSWORD"),
+                        'requesttoken': request_token,
+                        'sharingToken': sharing_token
+                    }
+                
+                    # Send a POST request to log in
+                    s.post(login_url, data=data)
+                    download_response = s.get(file_url)
+
+                # Save the content of the response to the local file
+                download_path = os.path.join(f'{local_file_path}/', 'BUEK_data.gpkg')
+                with open(download_path, 'wb') as file:
+                    for chunk in download_response.iter_content(chunk_size=3000):
+                        file.write(chunk)
+                        
+                    logger.info(f"File downloaded successfully to {download_path}")
+                    
             
     except Exception as e:
         logger.error(f"An error occured while extracting the GeoNetwork data: {e}")
@@ -193,6 +244,47 @@ def clip_data(**kwargs):
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoNetwork data: {e}")
         raise 
+
+
+
+def clip_soil_data(**kwargs):
+    """
+    Description: The `clip_soil_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
+                 it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded netCDF4 geodata
+    """
+    input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
+    directory = os.path.join(current_dir, geo_tag, 'BUEK_data.gpkg')
+    
+    try:
+        latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000
+
+        gdf = gpd.read_file(directory)
+        buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
+        miny, maxy, minx, maxx = convert_buffer_extent(buffer_extent)
+
+        ## Transform crs from EPSG:25832 (default CRS) to EPSG:4326 (Lat/Long coordinate system)
+        gdf = gdf.to_crs('EPSG:4326')
+
+        ## Assign buffer-extents to bounding-box and initialize bbox as MultiPolgons
+        bbox = box(minx, miny, maxx, maxy)
+        multi_bbox = MultiPolygon([bbox])
+
+        # Create a GeoDataFrame for the bounding box, to be used later for clipping
+        bbox_gdf = gpd.GeoDataFrame(geometry=[multi_bbox], crs=gdf.crs)
+
+        ## Clip the soil geo file based on the bounding box buffer extent and set the crs back to its default value EPSG:25832")
+        clipped_df = gpd.clip(gdf, bbox_gdf)
+        clipped_df = clipped_df.to_crs('EPSG:25832')
+
+        # Write clipped output as .gpkg
+        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.gpkg')
+        logger.info(f"Writing clipped data to {output_path}")
+        clipped_df.to_file(output_path, driver='GPKG')
+        
+    except Exception as e:
+        logger.error(f"An error occured while clipping the GeoPackage data: {e}")
+        raise 
+    
     
 
 def verify_file_exists(local, ftp):
