@@ -74,10 +74,25 @@ curl -H "Content-type: application/json" \
             "note": "posted via curl"
         }'
 
-// #######################################
-// ####### TEST RUN PARMAS - SYSNTAX #####
+// ##############################################################################
+// ####### TEST RUN PARMAS ON DEV ENVIRONMENT - SYNTAX ############################
+// ##### THE AIRFLOW-USERNAME/PASSWORD FOR TESTING ON DEV IS airflow/airflow ######
 curl -H "Content-type: application/json" \
      -H "Accept: application/json" \
      -X POST --user "AIRFLOW-USERNAME:AIRFLOW-PASSWORD" \
-     "localhost:8080/api/v1/dags/DAG-ID/dagRuns" \
-     -d '{CONF}'
+     "localhost:8080/api/v1/dags/primary_DAG/dagRuns" \
+     -d '{"conf": 
+            {"lat" : "SAMPLE-LATITUDE",
+            "long": "SAMPLE-LONGITUDE"}
+        }'
+
+// ####### TEST RUN PARMAS ON PROD ENVIRONMENT - SYNTAX ##########################
+// ##### REFER TO THE EMAIL SENT EARLIER FOR THE AIRFLOW-USERNAME/PASSWORD  ######
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user 'AIRFLOW-USERNAME:AIRFLOW-PASSWORD' \ 
+     "https://breedfides-airflow.bi.denbi.de/api/v1/dags/primary_DAG/dagRuns" \
+     -d '{"conf": 
+            {"lat" : "SAMPLE-LATITUDE",
+            "long": "SAMPLE-LONGITUDE"}
+        }'
