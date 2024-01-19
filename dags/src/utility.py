@@ -166,45 +166,6 @@ def download_geodata(**kwargs):
             ## Close the FTP connection
             ftp.quit()
             
-        elif 'fetch_soil' in dag_id:
-            base_url = 'https://cloud.thuenen.de/index.php/s/6RTizJ5ZEPsHJps/'
-            login_url = base_url + 'authenticate/downloadShare'
-            file_url = base_url + 'download?path=%2F&files=BUEK_data.gpkg'
-
-            gpkg_files = set(os.path.basename(fp) for fp in glob.glob(f'{local_file_path}/*.gpkg')) ### List the files in the local directory
-            file_exists, files_to_download = verify_file_exists(gpkg_files, {'BUEK_data.gpkg'})
-      
-            if file_exists:
-                pass
-            
-            else:
-                with requests.Session() as s:
-                    response = s.get(login_url)
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    
-                    # Extract tokens
-                    request_token = soup.find('input', {'name': 'requesttoken'}).get('value', '')
-                    sharing_token = soup.find('input', {'name': 'sharingToken'}).get('value', '')
-
-                    data = {
-                        'password': os.getenv("PASSWORD"),
-                        'requesttoken': request_token,
-                        'sharingToken': sharing_token
-                    }
-                
-                    # Send a POST request to log in
-                    s.post(login_url, data=data)
-                    download_response = s.get(file_url)
-
-                # Save the content of the response to the local file
-                download_path = os.path.join(f'{local_file_path}/', 'BUEK_data.gpkg')
-                with open(download_path, 'wb') as file:
-                    for chunk in download_response.iter_content(chunk_size=3000):
-                        file.write(chunk)
-                        
-                    logger.info(f"File downloaded successfully to {download_path}")
-                    
-            
     except Exception as e:
         logger.error(f"An error occured while extracting the GeoNetwork data: {e}")
         raise 
@@ -219,7 +180,7 @@ def clip_data(**kwargs):
     directory = current_dir + geo_tag
     
     try:
-        latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000
+        latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
         
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
         lat_min, lat_max, long_min, long_max = convert_buffer_extent(buffer_extent)
@@ -256,7 +217,7 @@ def clip_soil_data(**kwargs):
     directory = os.path.join(current_dir, geo_tag, 'BUEK_data.gpkg')
     
     try:
-        latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000
+        latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
 
         gdf = gpd.read_file(directory)
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)

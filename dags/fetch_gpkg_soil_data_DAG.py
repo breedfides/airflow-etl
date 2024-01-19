@@ -35,17 +35,10 @@ dag = DAG(
     default_args=default_args,
     schedule=None,
     catchup=False,
-    tags=["BreedFides", "OGC", "soil"]
+    tags=["BreedFides", "soil"]
 )
 
-with dag:
-    input = PythonOperator(
-        task_id='input',
-        python_callable=download_geodata,
-        provide_context=True,
-        execution_timeout=timedelta(seconds=3600)
-    )
-    
+with dag:    
     clip = PythonOperator(
         task_id='clip',
         python_callable=clip_soil_data,

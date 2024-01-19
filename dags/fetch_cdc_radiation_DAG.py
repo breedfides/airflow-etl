@@ -35,7 +35,7 @@ dag = DAG(
     default_args=default_args,
     schedule=None,
     catchup=False,
-    tags=["BreedFides", "OGC", "radiation_global"]
+    tags=["BreedFides", "DWD", "CDC", "radiation_global"]
 )
 
 with dag:

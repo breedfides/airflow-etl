@@ -35,7 +35,7 @@ dag = DAG(
     default_args=default_args,
     schedule=None,
     catchup=False,
-    tags=["BreedFides", "OGC", "air_temperature_mean"]
+    tags=["BreedFides", "DWD", "CDC", "air_temperature_mean"]
 )
 
 with dag:
