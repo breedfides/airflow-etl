@@ -56,4 +56,4 @@ with dag:
     # )
     
     
-    input >> clip
+    clip
