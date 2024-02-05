@@ -81,9 +81,12 @@ curl -H "Content-type: application/json" \
      -H "Accept: application/json" \
      -X POST --user "AIRFLOW-USERNAME:AIRFLOW-PASSWORD" \
      "localhost:8080/api/v1/dags/primary_DAG/dagRuns" \
-     -d '{"conf": 
-            {"lat" : "SAMPLE-LATITUDE",
-            "long": "SAMPLE-LONGITUDE"}
+     -d '{"conf":
+            {
+                "lat" : "SAMPLE-LATITUDE",
+                "long": "SAMPLE-LONGITUDE",
+                "buffer_in_meters": "SAMPLE-BUFFER-IN-METRES" /// NOTE: THIS ENTRY IS OPTIONAL, IF THE BUFFER IS NOT INCLUDED ON THE PAYLOAD - IT DEFAULTS TO 3000 AS THE BUFFER
+            }
         }'
 
 // ####### TEST RUN PARMAS ON PROD ENVIRONMENT - SYNTAX ##########################
@@ -93,6 +96,9 @@ curl -H "Content-type: application/json" \
      -X POST --user 'AIRFLOW-USERNAME:AIRFLOW-PASSWORD' \ 
      "https://breedfides-airflow.bi.denbi.de/api/v1/dags/primary_DAG/dagRuns" \
      -d '{"conf": 
-            {"lat" : "SAMPLE-LATITUDE",
-            "long": "SAMPLE-LONGITUDE"}
+            {
+                "lat" : "SAMPLE-LATITUDE",
+                "long": "SAMPLE-LONGITUDE",
+                "buffer_in_meters": "SAMPLE-BUFFER-IN-METRES" /// NOTE: THIS ENTRY IS OPTIONAL, IF THE BUFFER IS NOT INCLUDED ON THE PAYLOAD - IT DEFAULTS TO 3000 AS THE BUFFER
+            }
         }'
