@@ -16,8 +16,9 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_soil_data
+from src.utility import download_geodata, clip_soil_data, get_most_recent_dag_run
 
 ####################
 ## DAG definition ##
@@ -26,8 +27,8 @@ default_args = {
     "owner": "thünen_institute",
     "depends_on_past": False,
     "start_date": pendulum.datetime(2023, 10, 6, tz='UTC'),
-    "retries": 1,
-    "retry_delay": timedelta(minutes=3)
+    "retries": 4,
+    "retry_delay": timedelta(minutes=6)
 }
 
 dag = DAG(
@@ -38,7 +39,16 @@ dag = DAG(
     tags=["BreedFides", "soil"]
 )
 
-with dag:    
+with dag:
+    dag_sensor = ExternalTaskSensor(
+        task_id = 'sensor',
+        external_dag_id = 'primary_DAG',
+        external_task_id = 'ingest',
+        mode = 'reschedule',
+        execution_date_fn = lambda dt: get_most_recent_dag_run("primary_DAG"),
+        poke_interval = 5
+    )
+
     clip = PythonOperator(
         task_id='clip',
         python_callable=clip_soil_data,
@@ -56,4 +66,4 @@ with dag:
     # )
     
     
-    clip
+    dag_sensor >> clip

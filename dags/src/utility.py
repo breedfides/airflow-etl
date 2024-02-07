@@ -38,6 +38,7 @@ from bs4 import BeautifulSoup
 import geopandas as gpd
 from shapely.geometry import box, MultiPolygon
 from dotenv import load_dotenv
+from airflow.models import DagRun
 
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
@@ -75,6 +76,26 @@ def fetch_payload(**kwargs):
     except Exception as e:
         logger.error(f"An error occured while extracting the JSON payload: {e}")
         raise
+
+
+def get_most_recent_dag_run(dag_id):
+    """
+    Description:
+        The `get_most_recent_dag_run` function returns the execution time of the previous DAG, this function is called by the ExternalDAGSensor operator
+
+    Args:
+        dag_id (_type_): Name of External DAG
+
+    Returns:
+        _type_: DateTime / None
+    """
+    dag_runs = DagRun.find(dag_id=dag_id)
+    dag_runs.sort(key=lambda x: x.execution_date, reverse=True)
+
+    if dag_runs:
+        return dag_runs[0].execution_date
+    else:
+        return None
 
     
 def download_geodata(**kwargs):

@@ -16,8 +16,11 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_data
+from src.utility import download_geodata, clip_data, get_most_recent_dag_run
+from airflow.models import DagRun
+
 
 ####################
 ## DAG definition ##
@@ -26,8 +29,8 @@ default_args = {
     "owner": "thünen_institute",
     "depends_on_past": False,
     "start_date": pendulum.datetime(2023, 10, 6, tz='UTC'),
-    "retries": 1,
-    "retry_delay": timedelta(minutes=3)
+    "retries": 4,
+    "retry_delay": timedelta(minutes=5)
 }
 
 dag = DAG(
@@ -39,6 +42,15 @@ dag = DAG(
 )
 
 with dag:
+    dag_sensor = ExternalTaskSensor(
+        task_id = 'fetch_cdc_air_temp_sensor',
+        external_dag_id = 'fetch_cdc_radiation',
+        external_task_id = 'clip',
+        mode = 'reschedule',
+        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_cdc_radiation"),
+        poke_interval = 5
+    )
+
     input = PythonOperator(
         task_id='input',
         python_callable=download_geodata,
@@ -63,4 +75,4 @@ with dag:
     # )
     
     
-    input >> clip
+    dag_sensor >> input >> clip
