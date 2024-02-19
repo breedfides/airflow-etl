@@ -158,3 +158,4 @@ shapely==2.0.2
 geopandas==0.14.1
 python-dotenv==1.0.0
 pyogrio==0.7.2
+pyarrow==15.0.0
