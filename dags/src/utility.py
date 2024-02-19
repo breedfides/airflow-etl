@@ -330,24 +330,3 @@ def convert_buffer_extent(buffer_extent):
     
     except Exception as e:
         logger.error(f"An error occured while converting the buffer extent to lat/long positions: {e}")
-    
-    
-def non_time_coords(ds):
-    """
-    Description: The `convert_buffer_extent` function transforms coordinates from a given buffer extent in the UTM Zone 32 North coordinate reference system 
-                 to latitude and longitude positions in the WGS84 standard. 
-    
-    Output: The resulting coordinates represent the minimum and maximum latitude and longitude values.
-    """
-    return [v for v in ds.data_vars
-            if 'time' not in ds[v].dims]
-
-
-def drop_non_essential_vars_pop(ds):
-    """
-    Description: The `convert_buffer_extent` function transforms coordinates from a given buffer extent in the UTM Zone 32 North coordinate reference system 
-                 to latitude and longitude positions in the WGS84 standard. 
-    
-    Output: The resulting coordinates represent the minimum and maximum latitude and longitude values.
-    """
-    return ds.drop(non_time_coords(ds)) 
