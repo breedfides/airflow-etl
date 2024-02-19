@@ -157,3 +157,4 @@ netCDF4==1.6.5
 shapely==2.0.2
 geopandas==0.14.1
 python-dotenv==1.0.0
+pyogrio==0.7.2

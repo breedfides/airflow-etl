@@ -240,7 +240,7 @@ def clip_soil_data(**kwargs):
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
 
-        gdf = gpd.read_file(directory)
+        gdf = gpd.read_file(directory, engine='pyogrio', use_arrow=True)
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
         miny, maxy, minx, maxx = convert_buffer_extent(buffer_extent)
 
