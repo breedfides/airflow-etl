@@ -18,7 +18,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_soil_data, get_most_recent_dag_run
+from src.utility import clip_soil_data, get_most_recent_dag_run, get_latest_file
 
 ####################
 ## DAG definition ##
@@ -56,14 +56,14 @@ with dag:
         execution_timeout=timedelta(seconds=3600)
     )
     
-    # output = LocalFilesystemToS3Operator(
-    #     task_id='load',
-    #     filename=,
-    #     dest_key=,
-    #     dest_bucket=,
-    #     aws_conn_id=,
-    #     replace=True
-    # )
+    output = LocalFilesystemToS3Operator(
+        task_id='output',
+        filename=get_latest_file('output/soil/'),
+        dest_key=f'soil/{get_latest_file('output/soil/')}',
+        dest_bucket='BreedFidesETL-OBS',
+        aws_conn_id='aws_breedfides_obs',
+        replace=True
+    )
     
     
-    dag_sensor >> clip
+    dag_sensor >> clip >> output
