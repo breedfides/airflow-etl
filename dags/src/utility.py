@@ -85,7 +85,7 @@ def get_latest_file(directory):
     Output: A string value denoting the output's filename
     """
     try:
-        list_of_files = glob.glob(os.path.join(directory, '*'))
+        list_of_files = glob.glob(os.path.join(current_dir, directory, '*'))
         latest_file = max(list_of_files, key=os.path.getctime)
     
         return latest_file
