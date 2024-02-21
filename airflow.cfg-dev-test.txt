@@ -5,7 +5,7 @@
 # Variable: AIRFLOW__CORE__DAGS_FOLDER
 #
 #dags_folder = /home/ubuntu/Documents/breedfides-airflow//dags
-dags_folder = /home/ubuntu/airflow-etl/dags
+dags_folder =./dags
 
 # Hostname by providing a path to a callable, which will resolve the hostname.
 # The format is "package.function".
@@ -112,7 +112,7 @@ load_examples = False
 # Variable: AIRFLOW__CORE__PLUGINS_FOLDER
 #
 #plugins_folder = /home/ubuntu/Documents/breedfides-airflow//plugins
-plugins_folder = /home/ubuntu/airflow-etl/plugins
+plugins_folder = ./plugins
 
 # Should tasks be executed via forking of the parent process ("False",
 # the speedier option) or by spawning a new python process ("True" slow,
@@ -548,7 +548,7 @@ check_migrations = True
 # Variable: AIRFLOW__LOGGING__BASE_LOG_FOLDER
 #
 #base_log_folder = /home/ubuntu/Documents/breedfides-airflow//logs
-base_log_folder = /home/ubuntu/airflow-etl/logs
+base_log_folder = ./logs
 
 # Airflow can store logs remotely in AWS S3, Google Cloud Storage or Elastic Search.
 # Set this to True if you want to enable remote logging.
@@ -726,7 +726,7 @@ log_processor_filename_template = {{ filename }}.log
 # Variable: AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_LOCATION
 #
 #dag_processor_manager_log_location = /home/ubuntu/Documents/breedfides-airflow//logs/dag_processor_manager/dag_processor_manager.log
-dag_processor_manager_log_location = /home/ubuntu/airflow-etl/logs/dag_processor_manager/dag_processor_manager.log
+dag_processor_manager_log_location = ./logs/dag_processor_manager/dag_processor_manager.log
 
 # Name of handler to read task instance logs.
 # Defaults to use ``task`` handler.
@@ -1168,7 +1168,7 @@ access_denied_message = Access is Denied
 # Variable: AIRFLOW__WEBSERVER__CONFIG_FILE
 #
 #config_file = /home/ubuntu/Documents/breedfides-airflow//webserver_config.py
-config_file = /home/ubuntu/airflow-etl/webserver_config.py
+config_file = ./webserver_config.py
 
 # The base url of your website as airflow cannot guess what domain or
 # cname you are using. This is used in automated emails that
@@ -1176,7 +1176,7 @@ config_file = /home/ubuntu/airflow-etl/webserver_config.py
 #
 # Variable: AIRFLOW__WEBSERVER__BASE_URL
 #
-base_url = https://breedfides-airflow.bi.denbi.de
+base_url = http://localhost:8080
 
 # Default timezone to display all dates in the UI, can be UTC, system, or
 # any IANA timezone string (e.g. Europe/Amsterdam). If left empty the
@@ -1848,7 +1848,7 @@ orphaned_tasks_check_interval = 300.0
 # Variable: AIRFLOW__SCHEDULER__CHILD_PROCESS_LOG_DIRECTORY
 #
 #child_process_log_directory = /home/ubuntu/Documents/breedfides-airflow//logs/scheduler
-child_process_log_directory = /home/ubuntu/airflow-etl/logs/scheduler
+child_process_log_directory = ./logs/scheduler
 
 # Local task jobs periodically heartbeat to the DB. If the job has
 # not heartbeat in this many seconds, the scheduler will mark the
@@ -2173,4 +2173,3 @@ cloudwatch_task_handler_json_serializer = airflow.providers.amazon.aws.log.cloud
 # Options for IMAP provider.
 
 # ssl_context = 
-
