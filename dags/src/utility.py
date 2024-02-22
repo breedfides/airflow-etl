@@ -77,7 +77,8 @@ def fetch_payload(**kwargs):
         logger.error(f"An error occured while extracting the JSON payload: {e}")
         raise
     
-# Function to get the latest file in a directory
+
+
 def get_latest_file(directory):
     """
     Description: The `get_latest_file` function returns the most recent filename on the output directory
