@@ -19,8 +19,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_data, get_most_recent_dag_run, get_latest_file
-from airflow.models import DagRun
+from src.utility import download_geodata, clip_data, get_most_recent_dag_run, get_latest_files, write_to_s3
 
 
 ####################
@@ -66,13 +65,11 @@ with dag:
         execution_timeout=timedelta(seconds=3600)
     )
     
-    output = LocalFilesystemToS3Operator(
+    output = PythonOperator(
         task_id='output',
-        filename=get_latest_file('output/air_temperature_mean/'),
-        dest_key=get_latest_file('output/air_temperature_mean/').split("/output/")[-1],
-        dest_bucket='BreedFidesETL-OBS',
-        aws_conn_id='aws_breedfides_obs',
-        replace=True
+        python_callable=write_to_s3,
+        provide_context=True,
+        op_args=get_latest_files(directory='output/soil/', extensions=('.nc', '.txt'))
     )
     
     

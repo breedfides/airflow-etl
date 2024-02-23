@@ -33,7 +33,8 @@ import geopandas as gpd
 from shapely.geometry import box, MultiPolygon
 from dotenv import load_dotenv
 from airflow.models import DagRun
-from pathlib import Path
+
+from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
@@ -73,20 +74,52 @@ def fetch_payload(**kwargs):
         raise
     
 
-def get_latest_file(directory):
+def get_latest_files(directory, extensions):
     """
     Description: The `get_latest_file` function returns the most recent filename on the output directory
      
     Output: A string value denoting the output's filename
     """
     try:
-        files = [os.path.join(root, file) for root, dirs, files in os.walk(os.path.join(current_dir, directory)) for file in files]
-        most_recent_file = max(files, key=lambda x: os.path.getmtime(x), default=None)
-        return most_recent_file
+        # Get the most recent file for each extension
+        most_recent_files = {
+            ext: max(glob.glob(os.path.join(directory, f'*{ext}')), key=os.path.getctime, default=None)
+            for ext in extensions
+        }
 
+        return tuple(most_recent_files[ext] for ext in extensions)
+    
     except Exception as e:
-        logger.error(f"An error occured while returning the filename: {e}")
+        logger.error(f"An error occurred while returning the filenames: {e}")
         raise
+    
+
+def write_metadata(filepath, metadata):
+    """
+    Description: The `write_metadata` function create a .txt file on the output directory and writes the metadata for each DAG execution
+    """
+    with open(filepath, 'w') as file:
+        for key, value in metadata.items():
+            file.write(f"{key}: {value}\n")
+            
+
+def write_to_s3(local_files, **kwargs):
+    """
+    Description: The `write_to_s3` function writes both the clipped output and its metadata to the object store container
+    """
+    for local_file in local_files:
+        filetype = local_file.split(".")[-1]
+        
+        task = LocalFilesystemToS3Operator(
+            task_id=f'write_{filetype}_output', 
+            filename=local_file,
+            dest_key=local_file.split("/output/")[-1], 
+            dest_bucket='BreedFidesETL-OBS',
+            aws_conn_id='aws_breedfides_obs',
+            replace=True        
+        )
+        
+        task.execute(context=kwargs)
 
 
 def get_most_recent_dag_run(dag_id):
@@ -213,6 +246,13 @@ def clip_data(**kwargs):
     
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
+        metadata = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'buffer_in_metres': buffer_in_metres,
+            'DAG_ID': kwargs['dag'].dag_id,
+            'execution_start_time': kwargs['ts']
+        }     
         
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
         lat_min, lat_max, long_min, long_max = convert_buffer_extent(buffer_extent)
@@ -232,13 +272,12 @@ def clip_data(**kwargs):
         subset_ds = dataset.where(mask_lon & mask_lat, drop=True)
           
         # Write clipped output as netCDF
-        output_path = os.path.join(current_dir, 'output', geo_tag, 
-                                   f'lat={latitude}', f'long={longitude}', f'buffer_in_metres={buffer_in_metres}', 
-                                   f'date={datetime.now().strftime("%Y_%m_%d")}', f'{geo_tag}_{date_now}.nc')
-        ## Create Path if not exists
-        Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
+        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
         logger.info(f"Writing clipped data to {output_path}")
         subset_ds.to_netcdf(output_path, format='netcdf4', compute=False)
+        
+        # Write the metadata for the associated clipped output
+        write_metadata(os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoNetwork data: {e}")
@@ -276,11 +315,7 @@ def clip_soil_data(**kwargs):
         clipped_df = clipped_df.to_crs('EPSG:25832')
 
         # Write clipped output as .gpkg
-        output_path = os.path.join(current_dir, 'output', geo_tag, 
-                                   f'lat={latitude}', f'long={longitude}', f'buffer_in_metres={buffer_in_metres}', 
-                                   f'date={datetime.now().strftime("%Y_%m_%d")}', f'{geo_tag}_{date_now}.gpkg')
-        ## Create Path if not exists
-        Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
+        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.gpkg')
         logger.info(f"Writing clipped data to {output_path}")
         clipped_df.to_file(output_path, driver='GPKG')
         
