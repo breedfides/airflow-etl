@@ -83,7 +83,7 @@ def get_latest_files(directory, extensions):
     try:
         # Get the most recent file for each extension
         most_recent_files = {
-            ext: max(glob.glob(os.path.join(directory, f'*{ext}')), key=os.path.getctime, default=None)
+            ext: max(glob.glob(os.path.join(current_dir, directory, f'*{ext}')), key=os.path.getctime, default=None)
             for ext in extensions
         }
 
