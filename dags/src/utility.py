@@ -87,7 +87,7 @@ def get_latest_files(directory, extensions):
             for ext in extensions
         }
 
-        return tuple(most_recent_files[ext] for ext in extensions)
+        return list(most_recent_files[ext] for ext in extensions)
     
     except Exception as e:
         logger.error(f"An error occurred while returning the filenames: {e}")
@@ -295,6 +295,13 @@ def clip_soil_data(**kwargs):
     
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
+        metadata = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'buffer_in_metres': buffer_in_metres,
+            'DAG_ID': kwargs['dag'].dag_id,
+            'execution_start_time': kwargs['ts']
+        }     
 
         gdf = gpd.read_file(directory, engine='pyogrio', use_arrow=True)
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
@@ -318,6 +325,9 @@ def clip_soil_data(**kwargs):
         output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.gpkg')
         logger.info(f"Writing clipped data to {output_path}")
         clipped_df.to_file(output_path, driver='GPKG')
+        
+        # Write the metadata for the associated clipped output
+        write_metadata(os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoPackage data: {e}")

@@ -68,7 +68,8 @@ with dag:
         task_id='output',
         python_callable=write_to_s3,
         provide_context=True,
-        op_args=get_latest_files(directory='output/soil/', extensions=('.nc', '.txt'))
+        op_kwargs={'local_files': get_latest_files(directory='output/radiation_global/', extensions=('.nc', '.txt'))}
+
     )
     
     
