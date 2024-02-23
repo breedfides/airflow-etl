@@ -69,7 +69,7 @@ with dag:
     output = LocalFilesystemToS3Operator(
         task_id='output',
         filename=get_latest_file('output/air_temperature_mean/'),
-        dest_key=f"air_temperature_mean/{os.path.basename(get_latest_file('output/air_temperature_mean/'))}", 
+        dest_key=get_latest_file('output/air_temperature_mean/').split("/output/")[-1],
         dest_bucket='BreedFidesETL-OBS',
         aws_conn_id='aws_breedfides_obs',
         replace=True

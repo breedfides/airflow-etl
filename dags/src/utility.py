@@ -25,20 +25,15 @@ import xarray as xr
 import dask
 import glob
 from osgeo import ogr, osr
-import dask.dataframe as dd
-import owslib.fes
 from owslib.wfs import WebFeatureService
 from owslib.wcs import WebCoverageService
-import rasterio
-from rasterio import plot, MemoryFile
 import logging
 from datetime import datetime
-import requests
-from bs4 import BeautifulSoup
 import geopandas as gpd
 from shapely.geometry import box, MultiPolygon
 from dotenv import load_dotenv
 from airflow.models import DagRun
+from pathlib import Path
 
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
@@ -78,7 +73,6 @@ def fetch_payload(**kwargs):
         raise
     
 
-
 def get_latest_file(directory):
     """
     Description: The `get_latest_file` function returns the most recent filename on the output directory
@@ -86,13 +80,12 @@ def get_latest_file(directory):
     Output: A string value denoting the output's filename
     """
     try:
-        list_of_files = glob.glob(os.path.join(current_dir, directory, '*'))
-        latest_file = max(list_of_files, key=os.path.getctime)
-    
-        return latest_file
-    
+        files = [os.path.join(root, file) for root, dirs, files in os.walk(os.path.join(current_dir, directory)) for file in files]
+        most_recent_file = max(files, key=lambda x: os.path.getmtime(x), default=None)
+        return most_recent_file
+
     except Exception as e:
-        logger.error(f"An error occured while returning the filename: {e}")
+        print(f"An error occured while returning the filename: {e}")
         raise
 
 
@@ -239,7 +232,11 @@ def clip_data(**kwargs):
         subset_ds = dataset.where(mask_lon & mask_lat, drop=True)
           
         # Write clipped output as netCDF
-        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
+        output_path = os.path.join(current_dir, 'output', geo_tag, 
+                                   f'lat={latitude}', f'long={longitude}', f'buffer_in_metres={buffer_in_metres}', 
+                                   f'date={datetime.now().strftime("%Y_%m_%d")}', f'{geo_tag}_{date_now}.nc')
+        ## Create Path if not exists
+        Path(output_path).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing clipped data to {output_path}")
         subset_ds.to_netcdf(output_path, format='netcdf4', compute=False)
         
@@ -279,7 +276,11 @@ def clip_soil_data(**kwargs):
         clipped_df = clipped_df.to_crs('EPSG:25832')
 
         # Write clipped output as .gpkg
-        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.gpkg')
+        output_path = os.path.join(current_dir, 'output', geo_tag, 
+                                   f'lat={latitude}', f'long={longitude}', f'buffer_in_metres={buffer_in_metres}', 
+                                   f'date={datetime.now().strftime("%Y_%m_%d")}', f'{geo_tag}_{date_now}.gpkg')
+        ## Create Path if not exists
+        Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing clipped data to {output_path}")
         clipped_df.to_file(output_path, driver='GPKG')
         

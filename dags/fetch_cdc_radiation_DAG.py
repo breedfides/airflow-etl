@@ -67,7 +67,7 @@ with dag:
     output = LocalFilesystemToS3Operator(
         task_id='output',
         filename=get_latest_file('output/radiation_global/'),
-        dest_key=f"radiation_global/{os.path.basename(get_latest_file('output/radiation_global/'))}", 
+        dest_key=get_latest_file('output/radiation_global/').split("/output/")[-1],
         dest_bucket='BreedFidesETL-OBS',
         aws_conn_id='aws_breedfides_obs',
         replace=True
