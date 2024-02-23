@@ -85,7 +85,7 @@ def get_latest_file(directory):
         return most_recent_file
 
     except Exception as e:
-        print(f"An error occured while returning the filename: {e}")
+        logger.error(f"An error occured while returning the filename: {e}")
         raise
 
 
@@ -236,7 +236,7 @@ def clip_data(**kwargs):
                                    f'lat={latitude}', f'long={longitude}', f'buffer_in_metres={buffer_in_metres}', 
                                    f'date={datetime.now().strftime("%Y_%m_%d")}', f'{geo_tag}_{date_now}.nc')
         ## Create Path if not exists
-        Path(output_path).mkdir(parents=True, exist_ok=True)
+        Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing clipped data to {output_path}")
         subset_ds.to_netcdf(output_path, format='netcdf4', compute=False)
         
