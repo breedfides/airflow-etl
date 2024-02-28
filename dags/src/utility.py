@@ -274,7 +274,7 @@ def clip_data(**kwargs):
         # Write clipped output as netCDF
         output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
         logger.info(f"Writing clipped data to {output_path}")
-        subset_ds.to_netcdf(output_path, format='netcdf4', compute=False)
+        subset_ds.to_netcdf(output_path, format='netcdf4', compute=True)
         
         # Write the metadata for the associated clipped output
         write_metadata(os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
