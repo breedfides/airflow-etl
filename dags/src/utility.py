@@ -259,7 +259,7 @@ def clip_data(**kwargs):
         
         dataset = xr.open_mfdataset(f'{directory}/*.nc', decode_times=True, 
                                     chunks={'time': 1000000, 'latitude':1, 'longitude':1}, engine='netcdf4', 
-                                    data_vars='minimal', coords='minimal', compat='override', parallel=True)
+                                    data_vars='minimal', coords='minimal', compat='override', parallel=True, autoclose=True)
         
         # Clip the Array based on the converted buffer extent and set a boolean mask
         mask_lon = (dataset.lon >= long_min) & (dataset.lon <= long_max)
@@ -275,6 +275,7 @@ def clip_data(**kwargs):
         output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
         logger.info(f"Writing clipped data to {output_path}")
         subset_ds.to_netcdf(output_path, format='netcdf4', compute=True)
+        dataset.close()
         
         # Write the metadata for the associated clipped output
         write_metadata(os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
