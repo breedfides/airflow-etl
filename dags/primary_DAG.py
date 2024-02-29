@@ -54,7 +54,7 @@ with dag:
     
     for dag_id, external_dag in dag_ids.items():
         dag_sensor = ExternalTaskSensor(
-            task_id = 'sensor',
+            task_id = f'{dag_id}_sensor',
             external_dag_id = external_dag[0],
             external_task_id = external_dag[1],
             mode = 'reschedule',
