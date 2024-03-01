@@ -39,7 +39,7 @@ dag = DAG(
     tags=["BreedFides", "OGC"]
 )
 
-dag_ids = {'fetch_soil_data':['primary_DAG', 'ingest'], 'fetch_cdc_radiation':['fetch_soil_data', 'output'], 'fetch_cdc_air_temp':['fetch_cdc_radiation', 'output']} ## DAGs to be triggered using the INPUTs from the API payloads
+dag_ids = ['fetch_soil_data', 'fetch_cdc_radiation', 'fetch_cdc_air_temp'] ## DAGs to be triggered using the INPUTs from the API payloads
 
 with dag:
     ingest = PythonOperator(
@@ -49,19 +49,19 @@ with dag:
         execution_timeout = timedelta(seconds=3600)
     )
     
+    sensor = ExternalTaskSensor(
+        task_id = 'sensor',
+        external_dag_id = 'fetch_cdc_air_temp',
+        external_task_id = 'output', 
+        mode = 'poke',
+        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_cdc_air_temp"),
+        poke_interval = 5
+    )
+
     # List to store TriggerDagRunOperators
     trigger_downstreams = []
     
-    for dag_id, external_dag in dag_ids.items():
-        dag_sensor = ExternalTaskSensor(
-            task_id = f'{dag_id}_sensor',
-            external_dag_id = external_dag[0],
-            external_task_id = external_dag[1],
-            mode = 'reschedule',
-            execution_date_fn = lambda dt: get_most_recent_dag_run(external_dag[0]),
-            poke_interval = 5
-        )
-        
+    for dag_id in dag_ids:
         trigger_downstream = TriggerDagRunOperator(
             task_id = dag_id,
             trigger_dag_id = dag_id,
@@ -70,6 +70,6 @@ with dag:
             }
         )
         
-        trigger_downstreams += [dag_sensor, trigger_downstream]
+        trigger_downstreams.append(trigger_downstream)
 
-    ingest >> trigger_downstreams
+    ingest >> sensor >> trigger_downstreams

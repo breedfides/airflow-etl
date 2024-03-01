@@ -16,8 +16,10 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_data, get_latest_files, write_to_s3
+from src.utility import download_geodata, clip_data, get_most_recent_dag_run, get_latest_files, write_to_s3
 
 ####################
 ## DAG definition ##
@@ -39,6 +41,15 @@ dag = DAG(
 )
 
 with dag:
+    dag_sensor = ExternalTaskSensor(
+        task_id = 'sensor',
+        external_dag_id = 'fetch_soil_data',
+        external_task_id = 'output',
+        mode = 'reschedule',
+        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_soil_data"),
+        poke_interval = 5
+    )
+
     input = PythonOperator(
         task_id='input',
         python_callable=download_geodata,
@@ -62,4 +73,4 @@ with dag:
     )
     
     
-    input >> clip >> output
+    dag_sensor >> input >> clip >> output
