@@ -53,7 +53,7 @@ with dag:
         task_id = 'sensor',
         external_dag_id = 'fetch_cdc_air_temp',
         external_task_id = 'output', 
-        mode = 'poke',
+        mode = 'reschedule',
         execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_cdc_air_temp"),
         poke_interval = 5
     )
@@ -72,4 +72,4 @@ with dag:
         
         trigger_downstreams.append(trigger_downstream)
 
-    ingest >> sensor >> trigger_downstreams
+    ingest >> trigger_downstreams >> sensor

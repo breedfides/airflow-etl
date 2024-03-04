@@ -43,7 +43,7 @@ dag = DAG(
 
 with dag:
     dag_sensor = ExternalTaskSensor(
-        task_id = 'fetch_cdc_air_temp_sensor',
+        task_id = 'sensor',
         external_dag_id = 'fetch_cdc_radiation',
         external_task_id = 'output',
         mode = 'reschedule',
