@@ -52,7 +52,7 @@ with dag:
         task_id='output',
         python_callable=write_to_s3,
         provide_context=True,
-        op_kwargs={'local_files': get_latest_files(directory='output/soil/', extensions=('.gpkg', '.txt'))}
+        op_kwargs={'local_files': get_latest_files(directory='output/soil/')}
 
     )
     

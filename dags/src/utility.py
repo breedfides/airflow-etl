@@ -75,21 +75,17 @@ def fetch_payload(**kwargs):
         raise
     
 
-def get_latest_files(directory, extensions):
+def get_latest_files(directory):
     """
     Description: The `get_latest_file` function returns the most recent filename on the output directory
      
     Output: A string value denoting the output's filename
     """
     try:
-        # Get the most recent file for each extension
-        most_recent_files = {
-            ext: max(glob.glob(os.path.join(current_dir, directory, f'*{ext}')), key=os.path.getctime, default=None)
-            for ext in extensions
-        }
+        files = [os.path.join(root, file) for root, dirs, files in os.walk(os.path.join(current_dir, directory)) for file in files]
+        latest_files = sorted(files, key=lambda x: os.path.getmtime(x), reverse=True)[:2]
+        return latest_files
 
-        return list(most_recent_files[ext] for ext in extensions)
-    
     except Exception as e:
         logger.error(f"An error occurred while returning the filenames: {e}")
         raise
