@@ -144,7 +144,9 @@ def download_geodata(**kwargs):
     Description: The `download_geodata` function fetches the related geo/climate related data from independent sources (API or FTP), the retrieved data will
                  be clipped subsequently using the input attrbutes
     """
-    input_var = ast.literal_eval(kwargs['params']['input_attributes'])
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var = ast.literal_eval(params) if type(params) == str else params 
+    
     dag_id = kwargs['dag'].dag_id ## Extracts DAG-ID from context object
     ftp_dir = kwargs['dag'].tags[-1] ## Extract Tags
     local_file_path = current_dir + ftp_dir
@@ -238,7 +240,8 @@ def clip_data(**kwargs):
     Description: The `clip_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
                  it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded netCDF4 geodata
     """
-    input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var, geo_tag = ast.literal_eval(params) if type(params) == str else params, kwargs['dag'].tags[-1] 
     directory = current_dir + geo_tag
     
     try:
@@ -292,7 +295,8 @@ def clip_soil_data(**kwargs):
     Description: The `clip_soil_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
                  it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded soil geopackage data
     """
-    input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var, geo_tag = ast.literal_eval(params) if type(params) == str else params, kwargs['dag'].tags[-1] 
     directory = os.path.join(current_dir, geo_tag, 'BUEK_data.gpkg')
     
     try:
