@@ -21,24 +21,21 @@ import ftplib
 import os
 import gzip
 import io
+import re
 import xarray as xr
 import dask
 import glob
 from osgeo import ogr, osr
-import dask.dataframe as dd
-import owslib.fes
 from owslib.wfs import WebFeatureService
 from owslib.wcs import WebCoverageService
-import rasterio
-from rasterio import plot, MemoryFile
 import logging
 from datetime import datetime
-import requests
-from bs4 import BeautifulSoup
 import geopandas as gpd
 from shapely.geometry import box, MultiPolygon
 from dotenv import load_dotenv
 from airflow.models import DagRun
+
+from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
@@ -76,6 +73,50 @@ def fetch_payload(**kwargs):
     except Exception as e:
         logger.error(f"An error occured while extracting the JSON payload: {e}")
         raise
+    
+
+def get_latest_files(directory):
+    """
+    Description: The `get_latest_file` function returns the most recent filename on the output directory
+     
+    Output: A string value denoting the output's filename
+    """
+    try:
+        files = [os.path.join(root, file) for root, dirs, files in os.walk(os.path.join(current_dir, directory)) for file in files]
+        latest_files = sorted(files, key=lambda x: os.path.getmtime(x), reverse=True)[:2]
+        return latest_files
+
+    except Exception as e:
+        logger.error(f"An error occurred while returning the filenames: {e}")
+        raise
+    
+
+def write_metadata(filepath, metadata):
+    """
+    Description: The `write_metadata` function create a .txt file on the output directory and writes the metadata for each DAG execution
+    """
+    with open(filepath, 'w') as file:
+        for key, value in metadata.items():
+            file.write(f"{key}: {value}\n")
+            
+
+def write_to_s3(local_files, **kwargs):
+    """
+    Description: The `write_to_s3` function writes both the clipped output and its metadata to the object store container
+    """
+    for local_file in local_files:
+        filetype = local_file.split(".")[-1]
+        
+        task = LocalFilesystemToS3Operator(
+            task_id=f'write_{filetype}_output', 
+            filename=local_file,
+            dest_key=re.search(r'manual__.*', local_file).group(0),
+            dest_bucket='BreedFidesETL-OBS',
+            aws_conn_id='aws_breedfides_obs',
+            replace=True        
+        )
+        
+        task.execute(context=kwargs)
 
 
 def get_most_recent_dag_run(dag_id):
@@ -103,7 +144,9 @@ def download_geodata(**kwargs):
     Description: The `download_geodata` function fetches the related geo/climate related data from independent sources (API or FTP), the retrieved data will
                  be clipped subsequently using the input attrbutes
     """
-    input_var = ast.literal_eval(kwargs['params']['input_attributes'])
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var = ast.literal_eval(params) if type(params) == str else params 
+    
     dag_id = kwargs['dag'].dag_id ## Extracts DAG-ID from context object
     ftp_dir = kwargs['dag'].tags[-1] ## Extract Tags
     local_file_path = current_dir + ftp_dir
@@ -197,18 +240,28 @@ def clip_data(**kwargs):
     Description: The `clip_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
                  it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded netCDF4 geodata
     """
-    input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var, geo_tag = ast.literal_eval(params) if type(params) == str else params, kwargs['dag'].tags[-1] 
     directory = current_dir + geo_tag
     
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
+        dag_id, dag_run_id, start_time = kwargs['dag'].dag_id, kwargs['dag_run'].run_id, kwargs['ts']
+        metadata = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'buffer_in_metres': buffer_in_metres,
+            'DAG_ID': dag_id,
+            'DAG_RUN_ID': dag_run_id,
+            'execution_start_time': start_time
+        }     
         
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
         lat_min, lat_max, long_min, long_max = convert_buffer_extent(buffer_extent)
         
         dataset = xr.open_mfdataset(f'{directory}/*.nc', decode_times=True, 
                                     chunks={'time': 1000000, 'latitude':1, 'longitude':1}, engine='netcdf4', 
-                                    data_vars='minimal', coords='minimal', compat='override', parallel=True)
+                                    data_vars='minimal', coords='minimal', compat='override', parallel=True, autoclose=True)
         
         # Clip the Array based on the converted buffer extent and set a boolean mask
         mask_lon = (dataset.lon >= long_min) & (dataset.lon <= long_max)
@@ -221,9 +274,15 @@ def clip_data(**kwargs):
         subset_ds = dataset.where(mask_lon & mask_lat, drop=True)
           
         # Write clipped output as netCDF
-        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.nc')
+        output_path = os.path.join(current_dir, 'output', geo_tag, dag_run_id, f'{geo_tag}_{date_now}.nc')
+        ## Create output-path
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         logger.info(f"Writing clipped data to {output_path}")
-        subset_ds.to_netcdf(output_path, format='netcdf4', compute=False)
+        subset_ds.to_netcdf(output_path, format='netcdf4', compute=True)
+        dataset.close()
+        
+        # Write the metadata for the associated clipped output
+        write_metadata(os.path.join(current_dir, 'output', geo_tag, dag_run_id, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoNetwork data: {e}")
@@ -236,11 +295,21 @@ def clip_soil_data(**kwargs):
     Description: The `clip_soil_data` function utilizes the input attributes (the lattitude and longitude), creates a buffer-extent using both coordinates and a buffer,
                  it then converts the buffer-extent to min/max lat-long coordinates which in turn uses these attributes to clip the downloaded soil geopackage data
     """
-    input_var, geo_tag = ast.literal_eval(kwargs['params']['input_attributes']), kwargs['dag'].tags[-1]
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var, geo_tag = ast.literal_eval(params) if type(params) == str else params, kwargs['dag'].tags[-1] 
     directory = os.path.join(current_dir, geo_tag, 'BUEK_data.gpkg')
     
     try:
         latitude, longitude, buffer_in_metres = input_var['lat'], input_var['long'], 3000 if 'buffer_in_metres' not in input_var else int(input_var['buffer_in_metres'])
+        dag_id, dag_run_id, start_time = kwargs['dag'].dag_id, kwargs['dag_run'].run_id, kwargs['ts']
+        metadata = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'buffer_in_metres': buffer_in_metres,
+            'DAG_ID': dag_id,
+            'DAG_RUN_ID': dag_run_id,
+            'execution_start_time': start_time
+        }  
 
         gdf = gpd.read_file(directory, engine='pyogrio', use_arrow=True)
         buffer_extent = compute_buffer_extent(longitude, latitude, buffer_in_metres)
@@ -261,9 +330,14 @@ def clip_soil_data(**kwargs):
         clipped_df = clipped_df.to_crs('EPSG:25832')
 
         # Write clipped output as .gpkg
-        output_path = os.path.join(current_dir, 'output', geo_tag, f'{geo_tag}_{date_now}.gpkg')
+        output_path = os.path.join(current_dir, 'output', geo_tag, dag_run_id, f'{geo_tag}_{date_now}.gpkg')
+        ## Create output-path
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         logger.info(f"Writing clipped data to {output_path}")
         clipped_df.to_file(output_path, driver='GPKG')
+        
+        # Write the metadata for the associated clipped output
+        write_metadata(os.path.join(current_dir, 'output', geo_tag, dag_run_id, f'{geo_tag}_{date_now}_metadata.txt'), metadata)
         
     except Exception as e:
         logger.error(f"An error occured while clipping the GeoPackage data: {e}")
