@@ -88,6 +88,16 @@ curl -H "Content-type: application/json" \
                 "buffer_in_meters": "SAMPLE-BUFFER-IN-METRES" /// NOTE: THIS ENTRY IS OPTIONAL, IF THE BUFFER IS NOT INCLUDED ON THE PAYLOAD - IT DEFAULTS TO 3000 AS THE BUFFER
             }
         }'
+,
+curl -H "Content-type: application/json" \
+     -H "Accept: application/json" \
+     -X POST --user "AIRFLOW-USERNAME:AIRFLOW-PASSWORD" \
+     "localhost:8080/api/v1/dags/primary_DAG/dagRuns" \
+     -d '{"conf":
+            {
+                "loc" : "SAMPLE-LOCATION"
+            }
+        }'
 
 // ####### TEST RUN PARMAS ON PROD ENVIRONMENT - SYNTAX ##########################
 // ##### REFER TO THE EMAIL SENT EARLIER FOR THE AIRFLOW-USERNAME/PASSWORD  ######
