@@ -10,6 +10,7 @@
 ##########################################################
 
 import json 
+import os
 import pendulum
 from datetime import datetime, timedelta
 
@@ -18,7 +19,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_soil_data, get_most_recent_dag_run
+from src.utility import clip_soil_data, get_latest_files, write_to_s3
 
 ####################
 ## DAG definition ##
@@ -40,15 +41,6 @@ dag = DAG(
 )
 
 with dag:
-    dag_sensor = ExternalTaskSensor(
-        task_id = 'sensor',
-        external_dag_id = 'primary_DAG',
-        external_task_id = 'ingest',
-        mode = 'reschedule',
-        execution_date_fn = lambda dt: get_most_recent_dag_run("primary_DAG"),
-        poke_interval = 5
-    )
-
     clip = PythonOperator(
         task_id='clip',
         python_callable=clip_soil_data,
@@ -56,14 +48,13 @@ with dag:
         execution_timeout=timedelta(seconds=3600)
     )
     
-    # output = LocalFilesystemToS3Operator(
-    #     task_id='load',
-    #     filename=,
-    #     dest_key=,
-    #     dest_bucket=,
-    #     aws_conn_id=,
-    #     replace=True
-    # )
+    output = PythonOperator(
+        task_id='output',
+        python_callable=write_to_s3,
+        provide_context=True,
+        op_kwargs={'local_files': get_latest_files(directory='output/soil/')}
+
+    )
     
     
-    dag_sensor >> clip
+    clip >> output

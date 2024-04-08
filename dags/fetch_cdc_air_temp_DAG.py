@@ -10,6 +10,7 @@
 ##########################################################
 
 import json 
+import os
 import pendulum
 from datetime import datetime, timedelta
 
@@ -18,8 +19,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import download_geodata, clip_data, get_most_recent_dag_run
-from airflow.models import DagRun
+from src.utility import download_geodata, clip_data, get_most_recent_dag_run, get_latest_files, write_to_s3
 
 
 ####################
@@ -43,9 +43,9 @@ dag = DAG(
 
 with dag:
     dag_sensor = ExternalTaskSensor(
-        task_id = 'fetch_cdc_air_temp_sensor',
+        task_id = 'sensor',
         external_dag_id = 'fetch_cdc_radiation',
-        external_task_id = 'clip',
+        external_task_id = 'output',
         mode = 'reschedule',
         execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_cdc_radiation"),
         poke_interval = 5
@@ -65,14 +65,13 @@ with dag:
         execution_timeout=timedelta(seconds=3600)
     )
     
-    # output = LocalFilesystemToS3Operator(
-    #     task_id='load',
-    #     filename=,
-    #     dest_key=,
-    #     dest_bucket=,
-    #     aws_conn_id=,
-    #     replace=True
-    # )
+    output = PythonOperator(
+        task_id='output',
+        python_callable=write_to_s3,
+        provide_context=True,
+        op_kwargs={'local_files': get_latest_files(directory='output/air_temperature_mean/')}
+
+    )
     
     
-    dag_sensor >> input >> clip
+    dag_sensor >> input >> clip >> output

@@ -16,9 +16,9 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
-from src.utility import fetch_payload
+from src.utility import fetch_payload, get_most_recent_dag_run
 
 ####################
 ## DAG definition ##
@@ -49,6 +49,15 @@ with dag:
         execution_timeout = timedelta(seconds=3600)
     )
     
+    sensor = ExternalTaskSensor(
+        task_id = 'sensor',
+        external_dag_id = 'fetch_cdc_air_temp',
+        external_task_id = 'output', 
+        mode = 'reschedule',
+        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_cdc_air_temp"),
+        poke_interval = 5
+    )
+
     # List to store TriggerDagRunOperators
     trigger_downstreams = []
     
@@ -63,4 +72,4 @@ with dag:
         
         trigger_downstreams.append(trigger_downstream)
 
-    ingest >> trigger_downstreams
+    ingest >> trigger_downstreams >> sensor
