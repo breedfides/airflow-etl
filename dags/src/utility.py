@@ -118,6 +118,24 @@ def write_to_s3(local_files, **kwargs):
         
         task.execute(context=kwargs)
 
+def write_wcs_to_s3(local_files, **kwargs):
+    """
+    Description: The `write_to_s3` function writes both the clipped output and its metadata to the object store container
+    """
+    for local_file in local_files:
+        filetype = local_file.split(".")[-1]
+        
+        task = LocalFilesystemToS3Operator(
+            task_id=f'write_{filetype}_output', 
+            filename=local_file,
+            dest_key='wcs',
+            dest_bucket='BreedFidesETL-OBS',
+            aws_conn_id='aws_breedfides_obs',
+            replace=True        
+        )
+        
+        task.execute(context=kwargs)
+
 
 def get_most_recent_dag_run(dag_id):
     """

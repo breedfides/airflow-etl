@@ -18,7 +18,7 @@ from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemTo
 import pendulum
 from datetime import datetime, timedelta
 
-from src.utility import download_geodata, get_latest_files, write_to_s3
+from src.utility import download_geodata, get_latest_files, write_wcs_to_s3
 
 ####################
 ## DAG definition ##
@@ -58,12 +58,11 @@ with dag:
     
     output = PythonOperator(
         task_id='output',
-        python_callable=write_to_s3,
+        python_callable=write_wcs_to_s3,
         provide_context=True,
-        op_kwargs={'local_files': get_latest_files(directory='wcs/')[0]}
-
+        op_kwargs={'local_files': get_latest_files(directory='wcs/')}
     )
     
-    ##input >> output
-    input >> load
+    input >> output
+    # input >> load
 
