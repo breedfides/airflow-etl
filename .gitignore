@@ -4,3 +4,9 @@ airflow.db
 *.pyc
 logs/
 *.env
+# cached data
+radiation_global/
+soil/
+wcs/
+air_temperature_mean/
+output/
