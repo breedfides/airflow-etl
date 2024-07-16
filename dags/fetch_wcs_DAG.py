@@ -54,12 +54,23 @@ with dag:
     #    execution_timeout=timedelta(seconds=3600)
     # )
     
-    load = PythonOperator(
+    load = LocalFilesystemToS3Operator(
+            task_id='write_wcs_output', 
+            provide_context=True
+            filename=local_file,
+            dest_key='wcs',
+            dest_bucket='BreedFidesETL-OBS',
+            aws_conn_id='aws_breedfides_obs',
+            replace=True
+            )
+    
+    output = PythonOperator(
         task_id='output',
         python_callable=write_to_s3,
         provide_context=True,
         op_kwargs={'local_files': get_latest_files(directory='wcs/')}
+
     )
     
-    input >> load
+    input >> output ##>> load
 

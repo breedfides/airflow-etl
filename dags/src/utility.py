@@ -156,6 +156,12 @@ def download_geodata(**kwargs):
             wcs_url, cov_id = input_var['wcs_url'], input_var['cov_id']
             
             logger.info(f"Fetching Geo data from {wcs_url}")
+            metadata = {
+            'bbox': input_var['bbox'],
+            'wcs_url': wcs_url,
+            'cov_id': cov_id,
+            }
+
             wcs = WebCoverageService(wcs_url, version='2.0.1')
 
             response = wcs.getCoverage(
@@ -172,6 +178,7 @@ def download_geodata(**kwargs):
             output_dir_path = os.path.join(current_dir, 'wcs', f'{filename}_{date_now}.tif')
             with open(output_dir_path, 'wb') as file:
                 file.write(response.read())
+            write_metadata(filepath=output_dir_path + "_metadata.txt", metadata=metadata)
             
         elif dag_id == 'fetch_wfs':
             typename = input_var['typename']
