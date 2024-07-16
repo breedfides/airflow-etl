@@ -49,7 +49,6 @@ with dag:
     
     load = LocalFilesystemToS3Operator(
             task_id='write_wcs_output', 
-            provide_context=True,
             filename=get_latest_files(directory='wcs/')[0],
             dest_key='wcs',
             dest_bucket='BreedFidesETL-OBS',
