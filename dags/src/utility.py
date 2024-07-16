@@ -168,8 +168,8 @@ def download_geodata(**kwargs):
             filename = ''.join(e for e in cov_id if e.isalnum())
 
             ## write response to hdd as json file:
-            logger.info(f"Writing coverage file to breedfides-airflow/wcs/{filename}.tif")
-            output_dir_path = os.path.join(current_dir, 'wcs', f'{filename}.tif')
+            logger.info(f"Writing coverage file to breedfides-airflow/wcs/{filename}_{date_now}.tif")
+            output_dir_path = os.path.join(current_dir, 'wcs', f'{filename}_{date_now}.tif')
             with open(output_dir_path, 'wb') as file:
                 file.write(response.read())
             
