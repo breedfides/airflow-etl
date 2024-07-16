@@ -47,20 +47,24 @@ with dag:
         execution_timeout=timedelta(seconds=3600)
     )
     
-    # transform = PythonOperator(
-    #    task_id='transform',
-    #    python_callable=transform_wcs,
-    #    provide_context=True,
-    #    execution_timeout=timedelta(seconds=3600)
-    # )
+    load = LocalFilesystemToS3Operator(
+            task_id='write_wcs_output', 
+            provide_context=True,
+            filename=get_latest_files(directory='wcs/')[0],
+            dest_key='wcs',
+            dest_bucket='BreedFidesETL-OBS',
+            aws_conn_id='aws_breedfides_obs',
+            replace=True
+            )
     
     output = PythonOperator(
         task_id='output',
         python_callable=write_to_s3,
         provide_context=True,
-        op_kwargs={'local_files': get_latest_files(directory='wcs/')}
+        op_kwargs={'local_files': get_latest_files(directory='wcs/')[0]}
 
     )
     
-    input >> output ##>> load
+    ##input >> output
+    input >> load
 
