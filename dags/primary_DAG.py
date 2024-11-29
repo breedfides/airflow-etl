@@ -39,7 +39,7 @@ dag = DAG(
     tags=["BreedFides", "OGC"]
 )
 
-dag_ids = ['fetch_soil_data', 'fetch_cdc_radiation', 'fetch_cdc_air_temp'] ## DAGs to be triggered using the INPUTs from the API payloads
+dag_ids = ['fetch_gpkg_soil_data', 'fetch_cdc_radiation', 'fetch_cdc_air_temp'] ## DAGs to be triggered using the INPUTs from the API payloads
 
 with dag:
     ingest = PythonOperator(

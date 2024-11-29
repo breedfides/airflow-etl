@@ -33,7 +33,7 @@ default_args = {
 }
 
 dag = DAG(
-    "fetch_soil_data",
+    "fetch_gpkg_soil_data",
     default_args=default_args,
     schedule=None,
     catchup=False,
