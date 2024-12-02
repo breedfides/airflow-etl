@@ -43,10 +43,10 @@ dag = DAG(
 with dag:
     dag_sensor = ExternalTaskSensor(
         task_id = 'sensor',
-        external_dag_id = 'fetch_soil_data',
+        external_dag_id = 'fetch_gpkg_soil_data',
         external_task_id = 'output',
         mode = 'reschedule',
-        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_soil_data"),
+        execution_date_fn = lambda dt: get_most_recent_dag_run("fetch_gpkg_soil_data"),
         poke_interval = 5
     )
 

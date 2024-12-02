@@ -34,6 +34,7 @@ import geopandas as gpd
 from shapely.geometry import box, MultiPolygon
 from dotenv import load_dotenv
 from airflow.models import DagRun
+import requests
 
 from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemToS3Operator
 
@@ -59,6 +60,40 @@ SRS_LATLON.ImportFromEPSG(4326)
 SRS_UTM = osr.SpatialReference() ## Initialize spatial reference for a projected coordinate system UTM (Universal Transverse Mercator) Zone 32 North
 SRS_UTM.ImportFromEPSG(32632)
 
+def fetch_soilgrids(**kwargs):
+    params = kwargs['params'].get('input_attributes', kwargs['params'])
+    input_var, geo_tag = ast.literal_eval(params) if type(params) == str else params, kwargs['dag'].tags[-1] 
+    
+    logger.info(f"geo_tag: {geo_tag}")
+    logger.info(f"input_var: {input_var}")
+    run_id = kwargs['dag_run'].run_id
+    logger.info(f"run id: {run_id}")
+
+    url = 'https://rest.isric.org/soilgrids/v2.0/properties/query?'
+    payload = {'lon': input_var['long'], 'lat': input_var['lat']}
+
+    r = requests.get(url, params=payload)
+    
+    if r.status_code == 200:
+        logger.info(f"fetch was succesfull for: {r.url}")
+        file = os.path.join(current_dir, 'output','soilgrids', run_id, f'soilgrids_{date_now}.json')
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+        with open(file, 'w', encoding='utf-8') as f:
+            json.dump(r.json(), f, ensure_ascii=False, indent=4)
+            logger.info(f"file written as : {file}")
+        
+        file = os.path.join(current_dir, 'output','soilgrids', run_id, f'soilgrids_{date_now}-metadata.txt')
+        metadata = {
+                'latitude': input_var['lat'],
+                'longitude': input_var['long'],
+                'DAG_ID':  kwargs['dag'].dag_id,
+                'DAG_RUN_ID': run_id,
+                'execution_start_time': kwargs['ts']
+            }
+        write_metadata(filepath=file, metadata=metadata)
+        logger.info(f"file written as : {file}")
+    else:
+        logger.error(f"fetching was not successfull. status code {r.status_code}")
 
 def fetch_payload(**kwargs):
     """
@@ -106,11 +141,14 @@ def write_to_s3(local_files, **kwargs):
     """
     for local_file in local_files:
         filetype = local_file.split(".")[-1]
-        
+        logger.info(f"local_file : {local_file}")
+        logger.info(f"local_files : {local_files}")
+        dag_id = kwargs['dag'].dag_id
+        run_id = kwargs['dag_run'].run_id
         task = LocalFilesystemToS3Operator(
             task_id=f'write_{filetype}_output', 
             filename=local_file,
-            dest_key=re.search(r'manual__.*', local_file).group(0),
+            dest_key= run_id.split('-')[0] + '/' + dag_id + '/' + local_file.rsplit('/')[-1],
             dest_bucket='BreedFidesETL-OBS',
             aws_conn_id='aws_breedfides_obs',
             replace=True        
@@ -128,10 +166,10 @@ def write_wcs_to_s3(local_files, **kwargs):
         task = LocalFilesystemToS3Operator(
             task_id=f'write_{filetype}_output', 
             filename=local_file,
-            dest_key='wcs',
+            dest_key='soilgrids',
             dest_bucket='BreedFidesETL-OBS',
             aws_conn_id='aws_breedfides_obs',
-            replace=True        
+            replace=True
         )
         
         task.execute(context=kwargs)
@@ -164,7 +202,7 @@ def download_geodata(**kwargs):
     """
     params = kwargs['params'].get('input_attributes', kwargs['params'])
     input_var = ast.literal_eval(params) if type(params) == str else params 
-    
+    logger.info(f"input is: {input_var}")
     dag_id = kwargs['dag'].dag_id ## Extracts DAG-ID from context object
     ftp_dir = kwargs['dag'].tags[-1] ## Extract Tags
     local_file_path = current_dir + ftp_dir
