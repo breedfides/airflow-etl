@@ -39,7 +39,7 @@ dag = DAG(
     tags=["BreedFides", "OGC"]
 )
 
-dag_ids = ['fetch_soil_data', 'fetch_cdc_radiation', 'fetch_cdc_air_temp'] ## DAGs to be triggered using the INPUTs from the API payloads
+dag_ids = ['fetch_gpkg_soil_data', 'fetch_cdc_radiation', 'fetch_cdc_air_temp', 'fetch_soilgrids'] ## DAGs to be triggered using the INPUTs from the API payloads
 
 with dag:
     ingest = PythonOperator(
@@ -60,11 +60,11 @@ with dag:
 
     # List to store TriggerDagRunOperators
     trigger_downstreams = []
-    
     for dag_id in dag_ids:
         trigger_downstream = TriggerDagRunOperator(
             task_id = dag_id,
             trigger_dag_id = dag_id,
+            trigger_run_id= "{{ run_id }}" '-' + dag_id,
             conf = {
                 'input_attributes': "{{ task_instance.xcom_pull(task_ids='ingest', key='payload_key') }}"
             }
