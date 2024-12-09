@@ -1,0 +1,6 @@
+# ignores files for image build
+output/*
+airflow-etl
+air_temperature_mean/TT*
+radiation_global/SIS*
+logs

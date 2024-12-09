@@ -41,8 +41,11 @@ from airflow.providers.amazon.aws.transfers.local_to_s3 import LocalFilesystemTo
 ### GLOBAL VARS
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-## current_dir = f"{os.getcwd()}/" ## Uncomment this and comment the next line if testing is on local-env (not prod server)
-current_dir = os.path.expanduser(os.path.join("~", 'airflow-etl/'))
+setup = os.getenv("SETUP", "PRODUCTION")
+if setup == "DOCKER":
+    current_dir = f"{os.getcwd()}/" ## Uncomment this and comment the next line if testing is on local-env (not prod server)
+elif setup == "PRODUCTION":
+    current_dir = os.path.expanduser(os.path.join("~", 'airflow-etl/'))
 
 # Specify the path to the .env file
 dotenv_path = os.path.join(current_dir, 'dags', 'src', '.env')

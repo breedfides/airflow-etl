@@ -4,19 +4,19 @@ requirements:
 	pip3 install -r requirements.txt
 
 geospatial:
-	sudo apt install gdal-bin python3-gdal libgdal-dev
+	sudo apt install -y gdal-bin python3-gdal libgdal-dev
 
 python-dep:
-	sudo apt-get install python3-dev
+	sudo apt-get install -y python3-dev
 
 apt_update:
 	sudo apt-get update
 
 build-essential:
-	sudo apt-get install --reinstall build-essential
+	sudo apt-get install -y --reinstall build-essential
 
 postgres:
-	sudo apt install postgresql
+	sudo apt install -y postgresql
 
 create_database:
 	sudo -u postgres psql -l | grep -w airflow_db || sudo -u postgres createdb airflow_db
